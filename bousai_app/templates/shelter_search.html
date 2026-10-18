@@ -1,8 +1,138 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>避難所検索</h2>
-<p>登録されている避難所を確認できます。</p>
+<section class="home-section shelter-search" aria-labelledby="search-heading">
+  <h2 class="section-heading" id="search-heading">避難所を探す</h2>
+  <p class="search-intro">災害の種類や必要な設備を選んで、条件に合う避難所を検索できます。</p>
 
-<p><a href="/all_shelters">全施設一覧</a></p>
+  <form action="{{ url_for('search_results') }}" method="get">
+    <div class="search-field">
+      <label for="disaster-type">災害の種類</label>
+      <select id="disaster-type" name="disaster_type">
+        <option value="">指定しない</option>
+        {% for type in disaster_types %}
+          <option value="{{ type }}">{{ type }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <fieldset class="search-field">
+      <legend>必要な設備・条件</legend>
+      <label class="checkbox-option">
+        <input type="checkbox" name="pet_friendly" value="1">
+        ペット同伴可
+      </label>
+      <label class="checkbox-option">
+        <input type="checkbox" name="barrier_free" value="1">
+        バリアフリー
+      </label>
+    </fieldset>
+
+    <div class="search-field">
+      <label for="district">地区</label>
+      <input
+        id="district"
+        name="district"
+        type="text"
+        list="district-options"
+        placeholder="例: 片瀬"
+        autocomplete="off"
+      >
+      <datalist id="district-options">
+        {% for district in districts %}
+          <option value="{{ district }}">
+        {% endfor %}
+      </datalist>
+      <small>地区名を入力するか、候補から選択してください。</small>
+    </div>
+
+    <div class="search-field">
+      <label for="keyword">避難所名のキーワード</label>
+      <input
+        id="keyword"
+        name="keyword"
+        type="search"
+        placeholder="例: 小学校、御所見"
+        autocomplete="off"
+      >
+    </div>
+
+    <div class="search-actions">
+      <button class="search-button" type="submit">この条件で避難所を検索</button>
+      <a class="clear-button" href="{{ url_for('shelter_search') }}">条件をクリア</a>
+    </div>
+  </form>
+</section>
+
+<nav class="search-navigation" aria-label="避難所検索の補助メニュー">
+  <a class="secondary-button" href="{{ url_for('all_shelters') }}">全施設一覧</a>
+  <a class="secondary-button" href="{{ url_for('index') }}">ホームに戻る</a>
+</nav>
+
+<style>
+  .shelter-search { max-width: 720px; }
+  .search-intro { margin: -8px 0 24px; line-height: 1.7; }
+  .search-field { display: grid; gap: 9px; margin: 0 0 22px; }
+  .search-field > label, .search-field legend { font-weight: 700; }
+  .search-field input[type="text"], .search-field input[type="search"],
+  .search-field select {
+    width: 100%;
+    min-height: 54px;
+    padding: 12px 14px;
+    border: 2px solid #aab8c8;
+    border-radius: 6px;
+    background: #fff;
+    color: var(--ink);
+    font: inherit;
+    font-size: 1.05rem;
+  }
+  .search-field input:focus, .search-field select:focus {
+    outline: 3px solid #9cc5ff;
+    outline-offset: 2px;
+    border-color: var(--blue);
+  }
+  fieldset.search-field {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 28px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  .search-field legend { padding: 0 6px; }
+  .checkbox-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 36px;
+    font-size: 1.05rem;
+  }
+  .checkbox-option input { width: 22px; height: 22px; margin: 0; }
+  .search-field small { color: var(--muted); font-size: .92rem; }
+  .search-actions { display: grid; gap: 12px; margin-top: 28px; }
+  .search-button, .clear-button, .secondary-button {
+    display: inline-flex;
+    min-height: 56px;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 18px;
+    border: 0;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 1.08rem;
+    font-weight: 700;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .search-button { background: var(--blue); color: #fff; }
+  .search-button:hover, .search-button:focus-visible { background: var(--blue-dark); }
+  .clear-button, .secondary-button { border: 1px solid #aab8c8; background: #fff; color: var(--ink); }
+  .clear-button:hover, .secondary-button:hover { background: #f0f4f8; }
+  .search-navigation { display: flex; flex-wrap: wrap; gap: 12px; }
+  @media (max-width: 600px) {
+    .search-navigation > * { flex: 1 1 100%; }
+    fieldset.search-field { display: grid; }
+  }
+</style>
 {% endblock %}

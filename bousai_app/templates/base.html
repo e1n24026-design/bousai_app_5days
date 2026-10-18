@@ -4,31 +4,204 @@
   <meta charset="utf-8">
   <title>{% block title %}防災アプリ{% endblock %}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      color-scheme: light;
+      --blue: #2458a6;
+      --blue-dark: #1d4789;
+      --ink: #26384d;
+      --muted: #68798b;
+      --page: #f4f6f8;
+      --line: #e5eaf0;
+      --green: #258b50;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--page);
+      color: var(--ink);
+      font-family: "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
+    }
+
+    .site-header {
+      background: var(--blue);
+      color: #fff;
+      box-shadow: 0 2px 8px rgb(24 50 87 / 18%);
+    }
+
+    .header-inner {
+      width: min(100% - 40px, 1380px);
+      min-height: 70px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      color: #fff;
+      font-size: 1.35rem;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .menu-toggle {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-content: center;
+      gap: 5px;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .menu-toggle:hover, .menu-toggle:focus-visible { background: var(--blue-dark); }
+
+    .menu-toggle span {
+      width: 22px;
+      height: 2px;
+      display: block;
+      background: #fff;
+    }
+
+    .primary-nav {
+      padding: 8px max(20px, calc((100% - 1380px) / 2)) 16px;
+      border-top: 1px solid rgb(255 255 255 / 20%);
+    }
+
+    .primary-nav[hidden] { display: none; }
+
+    .nav-links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 24px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .primary-nav a { color: #fff; text-decoration: none; }
+    .primary-nav a:hover { text-decoration: underline; }
+    .nav-status { color: #dce8fa; }
+
+    .main-content {
+      width: min(100% - 32px, 910px);
+      margin: 32px auto 56px;
+    }
+
+    .home-section {
+      margin-bottom: 34px;
+      padding: 26px 28px 30px;
+      border: 1px solid #edf0f4;
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: 0 5px 20px rgb(39 60 84 / 5%);
+    }
+
+    .section-heading {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 20px;
+      color: var(--blue);
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    .section-icon { font-size: 1.2rem; }
+
+    #shelterMap {
+      height: clamp(270px, 34vw, 365px);
+      border-radius: 6px;
+      background: #dcebf0;
+      z-index: 0;
+    }
+
+    .weather-heading { justify-content: space-between; gap: 16px; }
+    .heading-label { display: inline-flex; align-items: center; gap: 10px; }
+
+    .auto-refresh {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--green);
+      font-size: .9rem;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .weather-content {
+      min-height: 128px;
+      padding: 18px 20px;
+      border-radius: 6px;
+      background: #f5f7f8;
+    }
+
+    .weather-content p { margin: 0 0 10px; }
+    .weather-content p:last-child { margin-bottom: 0; }
+    .weather-area { font-size: 1.05rem; }
+    .weather-status { color: var(--green); font-weight: 700; }
+    .weather-status.is-alert { color: #b54732; }
+    .weather-list { margin: 0 0 12px; padding-left: 1.35rem; }
+    .weather-meta { color: var(--muted); font-size: .9rem; }
+    .loading { color: var(--muted); }
+
+    @media (max-width: 600px) {
+      .header-inner { width: calc(100% - 32px); min-height: 62px; }
+      .brand { font-size: 1.2rem; }
+      .main-content { width: calc(100% - 24px); margin-top: 20px; }
+      .home-section { margin-bottom: 20px; padding: 20px 16px; }
+      .section-heading { font-size: 1.05rem; }
+      .weather-heading { align-items: flex-start; flex-direction: column; }
+      .weather-content { padding: 16px; }
+      #shelterMap { height: 290px; }
+    }
+  </style>
 </head>
 <body>
-  <!-- ヘッダー -->
-  <h1>防災アプリ</h1>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/">防災アプリ</a>
+      <button class="menu-toggle" type="button" aria-label="メニューを開く" aria-expanded="false" aria-controls="primary-nav">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+    <nav class="primary-nav" id="primary-nav" hidden>
+      <ul class="nav-links">
+        <li><a href="/">ホーム</a></li>
+        <li><a href="/shelter_search">避難所検索</a></li>
+        <li><a href="/shelter_register">避難所登録</a></li>
+        <li><a href="/board">指示・発信ボード</a></li>
+        {% if session.logged_in %}
+          <li class="nav-status">ログイン中{% if session.username %}（{{ session.username }}）{% endif %}</li>
+          <li><a href="/logout">ログアウト</a></li>
+        {% else %}
+          <li class="nav-status">未ログイン</li>
+          <li><a href="/login">ログイン</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+  </header>
 
-  <!-- ナビゲーション -->
-  <nav>
-    <a href="/">ホーム</a> |
-    <a href="/shelter_search">避難所検索</a> |
-    <a href="/shelter_register">避難所登録</a> |
-    <a href="/board">指示・発信ボード</a>
-    ｜
-    {% if session.logged_in %}
-      ログイン中{% if session.username %}（{{ session.username }}）{% endif %}
-      <a href="/logout">ログアウト</a>
-    {% else %}
-      未ログイン
-      <a href="/login">ログイン</a>
-    {% endif %}
-  </nav>
-  <hr>
-
-  <main>
+  <main class="main-content">
     <!-- ここに子テンプレートの content が入る -->
     {% block content %}{% endblock %}
   </main>
+  <script>
+    const menuToggle = document.querySelector('.menu-toggle');
+    const primaryNav = document.getElementById('primary-nav');
+
+    menuToggle.addEventListener('click', function() {
+      const isExpanded = menuToggle.getAttribute('aria-expanded') === 'true';
+      menuToggle.setAttribute('aria-expanded', String(!isExpanded));
+      menuToggle.setAttribute('aria-label', isExpanded ? 'メニューを開く' : 'メニューを閉じる');
+      primaryNav.hidden = isExpanded;
+    });
+  </script>
 </body>
 </html>

@@ -1,20 +1,111 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h2>検索結果</h2>
+<section class="home-section results-section" aria-labelledby="results-heading">
+  <h2 class="section-heading" id="results-heading">
+    {{ '検索結果' if search_performed else '全施設一覧' }}
+  </h2>
 
-{% if results %}
-  <ul>
-    {% for shelter in results %}
-    <li>{{ shelter.name }}</li>
-    {% endfor %}
-  </ul>
-{% else %}
-  <p>該当する避難所が見つかりませんでした</p>
-{% endif %}
+  {% if search_performed %}
+    <div class="condition-summary" aria-label="検索条件">
+      <strong>検索条件</strong>
+      <ul>
+        {% if disaster_type %}<li>災害: {{ disaster_type }}</li>{% endif %}
+        {% if pet_friendly %}<li>ペット同伴可</li>{% endif %}
+        {% if barrier_free %}<li>バリアフリー</li>{% endif %}
+        {% if district %}<li>地区: {{ district }}</li>{% endif %}
+        {% if keyword %}<li>キーワード: {{ keyword }}</li>{% endif %}
+      </ul>
+    </div>
+  {% else %}
+    <p>登録されている避難所を一覧表示しています。</p>
+  {% endif %}
 
-<p>
-  <a href="/shelter_search">検索画面に戻る</a> |
-  <a href="/">トップページへ戻る</a>
-</p>
+  <p class="result-count">{{ results|length }}件の避難所</p>
+
+  {% if results %}
+    <ul class="shelter-list">
+      {% for shelter in results %}
+        <li class="shelter-card">
+          <h3>{{ shelter.name }}</h3>
+          <dl>
+            <div>
+              <dt>地区</dt>
+              <dd>{{ shelter.district if shelter.district is defined and shelter.district else '未登録' }}</dd>
+            </div>
+            <div>
+              <dt>対応する災害</dt>
+              <dd>
+                {% if shelter.disaster_types is defined and shelter.disaster_types %}
+                  {{ shelter.disaster_types|join('、') }}
+                {% else %}
+                  未登録
+                {% endif %}
+              </dd>
+            </div>
+            <div>
+              <dt>ペット同伴</dt>
+              <dd>
+                {% if shelter.pet_friendly is defined and shelter.pet_friendly is sameas true %}
+                  可
+                {% elif shelter.pet_friendly is defined and shelter.pet_friendly is sameas false %}
+                  不可
+                {% else %}
+                  未登録
+                {% endif %}
+              </dd>
+            </div>
+            <div>
+              <dt>バリアフリー</dt>
+              <dd>
+                {% if shelter.barrier_free is defined and shelter.barrier_free is sameas true %}
+                  対応
+                {% elif shelter.barrier_free is defined and shelter.barrier_free is sameas false %}
+                  未対応
+                {% else %}
+                  未登録
+                {% endif %}
+              </dd>
+            </div>
+          </dl>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="empty-results">条件に合う避難所が見つかりませんでした。条件を変更して再検索してください。</p>
+  {% endif %}
+
+  <p class="data-note">
+    絞り込みと設備情報は登録内容に基づいています。未登録の条件は、条件を指定した検索では一致扱いになりません。
+  </p>
+</section>
+
+<nav class="results-navigation" aria-label="検索結果の操作">
+  <a class="results-button primary" href="{{ url_for('shelter_search') }}">条件を変更して検索</a>
+  <a class="results-button" href="{{ url_for('all_shelters') }}">全施設一覧</a>
+  <a class="results-button" href="{{ url_for('index') }}">ホームに戻る</a>
+</nav>
+
+<style>
+  .condition-summary { padding: 14px 18px; border-radius: 6px; background: #f3f6fa; }
+  .condition-summary ul { display: flex; flex-wrap: wrap; gap: 6px 22px; margin: 8px 0 0; padding-left: 1.25rem; }
+  .result-count { margin: 22px 0 12px; font-weight: 700; }
+  .shelter-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+  .shelter-card { padding: 18px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+  .shelter-card h3 { margin: 0 0 12px; color: var(--blue); font-size: 1.15rem; }
+  .shelter-card dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin: 0; }
+  .shelter-card dl div { min-width: 0; }
+  .shelter-card dt { color: var(--muted); font-size: .9rem; }
+  .shelter-card dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+  .empty-results { padding: 18px; border-left: 4px solid #d48b24; background: #fff8e8; }
+  .data-note { margin: 22px 0 0; color: var(--muted); font-size: .9rem; line-height: 1.6; }
+  .results-navigation { display: flex; flex-wrap: wrap; gap: 12px; }
+  .results-button { display: inline-flex; min-height: 50px; align-items: center; justify-content: center; padding: 10px 16px; border: 1px solid #aab8c8; border-radius: 6px; background: #fff; color: var(--ink); font-weight: 700; text-align: center; text-decoration: none; }
+  .results-button.primary { border-color: var(--blue); background: var(--blue); color: #fff; }
+  .results-button:hover { filter: brightness(.96); }
+  @media (max-width: 600px) {
+    .shelter-card dl { grid-template-columns: 1fr; }
+    .results-navigation > * { flex: 1 1 100%; }
+  }
+</style>
 {% endblock %}
