@@ -26,5 +26,17 @@
   {
     "id": 9,
     "name": "aaa"
+  },
+  {
+    "id": 10,
+    "name": "aaaaa",
+    "address": "青森県青森市",
+    "open_status": "開設中",
+    "capacity": 100,
+    "evacuee_count": 50,
+    "pet_friendly": true,
+    "barrier_free": true,
+    "wheelchair_toilet": true,
+    "welfare_space": true
   }
 ]

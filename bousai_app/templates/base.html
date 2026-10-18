@@ -23,6 +23,7 @@
       background: var(--page);
       color: var(--ink);
       font-family: "Noto Sans JP", "Yu Gothic", "Meiryo", sans-serif;
+      padding-bottom: calc(88px + env(safe-area-inset-bottom));
     }
 
     .site-header {
@@ -50,16 +51,17 @@
     .menu-toggle {
       width: 44px;
       height: 44px;
-      display: grid;
+      display: none;
       place-content: center;
       gap: 5px;
-      border: 0;
+      border: 2px solid transparent;
       border-radius: 4px;
       background: transparent;
+      color: #fff;
       cursor: pointer;
     }
 
-    .menu-toggle:hover, .menu-toggle:focus-visible { background: var(--blue-dark); }
+    .menu-toggle:hover, .menu-toggle:focus-visible { background: var(--blue-dark); outline: 2px solid #fff; }
 
     .menu-toggle span {
       width: 22px;
@@ -73,8 +75,6 @@
       border-top: 1px solid rgb(255 255 255 / 20%);
     }
 
-    .primary-nav[hidden] { display: none; }
-
     .nav-links {
       display: flex;
       flex-wrap: wrap;
@@ -87,12 +87,58 @@
 
     .primary-nav a { color: #fff; text-decoration: none; }
     .primary-nav a:hover { text-decoration: underline; }
+    .primary-nav a:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+    .primary-nav a[aria-current="page"] { font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
     .nav-status { color: #dce8fa; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 3px solid #7ab6ff;
+      outline-offset: 2px;
+    }
 
     .main-content {
       width: min(100% - 32px, 910px);
       margin: 32px auto 56px;
     }
+
+    .return-navigation {
+      position: fixed;
+      z-index: 1000;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      padding: 10px max(16px, calc((100% - 910px) / 2)) calc(10px + env(safe-area-inset-bottom));
+      border-top: 1px solid var(--line);
+      background: rgb(255 255 255 / 97%);
+      box-shadow: 0 -3px 12px rgb(39 60 84 / 10%);
+    }
+
+    .return-navigation-inner {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .return-navigation a {
+      display: inline-flex;
+      flex: 1 1 0;
+      max-width: 440px;
+      min-height: 52px;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 16px;
+      border: 1px solid var(--blue);
+      border-radius: 6px;
+      background: var(--blue);
+      color: #fff;
+      font-weight: 700;
+      text-align: center;
+      text-decoration: none;
+    }
+
+    .return-navigation a:hover { background: var(--blue-dark); }
+    .return-navigation a:focus-visible { outline: 3px solid #183c72; outline-offset: 3px; }
 
     .home-section {
       margin-bottom: 34px;
@@ -154,12 +200,24 @@
     @media (max-width: 600px) {
       .header-inner { width: calc(100% - 32px); min-height: 62px; }
       .brand { font-size: 1.2rem; }
-      .main-content { width: calc(100% - 24px); margin-top: 20px; }
+      .main-content { width: calc(100% - 24px); margin-top: 20px; margin-bottom: 24px; }
       .home-section { margin-bottom: 20px; padding: 20px 16px; }
       .section-heading { font-size: 1.05rem; }
       .weather-heading { align-items: flex-start; flex-direction: column; }
       .weather-content { padding: 16px; }
       #shelterMap { height: 290px; }
+      .return-navigation { padding-right: 12px; padding-left: 12px; }
+      .return-navigation-inner { gap: 8px; }
+      .return-navigation a { min-height: 54px; padding: 8px 10px; font-size: .94rem; }
+    }
+
+    @media (max-width: 760px) {
+      .header-inner { width: calc(100% - 32px); }
+      .menu-toggle { display: grid; }
+      .primary-nav { display: none; padding: 12px 16px 18px; }
+      .primary-nav.is-open { display: block; }
+      .nav-links { display: grid; gap: 0; }
+      .nav-links li { padding: 10px 4px; }
     }
   </style>
 </head>
@@ -171,12 +229,12 @@
         <span></span><span></span><span></span>
       </button>
     </div>
-    <nav class="primary-nav" id="primary-nav" hidden>
+    <nav class="primary-nav" id="primary-nav" aria-label="メインナビゲーション">
       <ul class="nav-links">
-        <li><a href="/">ホーム</a></li>
-        <li><a href="/shelter_search">避難所検索</a></li>
-        <li><a href="/shelter_register">避難所登録</a></li>
-        <li><a href="/board">指示・発信ボード</a></li>
+        <li><a href="/" {% if request.path == '/' %}aria-current="page"{% endif %}>ホーム</a></li>
+        <li><a href="/shelter_search" {% if request.path in ['/shelter_search', '/search_results', '/all_shelters'] %}aria-current="page"{% endif %}>避難所検索</a></li>
+        <li><a href="/shelter_register" {% if request.path == '/shelter_register' %}aria-current="page"{% endif %}>避難所登録</a></li>
+        <li><a href="/board" {% if request.path.startswith('/board') %}aria-current="page"{% endif %}>指示・発信ボード</a></li>
         {% if session.logged_in %}
           <li class="nav-status">ログイン中{% if session.username %}（{{ session.username }}）{% endif %}</li>
           <li><a href="/logout">ログアウト</a></li>
@@ -192,15 +250,39 @@
     <!-- ここに子テンプレートの content が入る -->
     {% block content %}{% endblock %}
   </main>
+  <nav class="return-navigation" aria-label="共通の戻り先">
+    <div class="return-navigation-inner">
+      <a href="{{ url_for('shelter_search') }}">検索画面に戻る</a>
+      <a href="{{ url_for('index') }}">トップページへ戻る</a>
+    </div>
+  </nav>
   <script>
     const menuToggle = document.querySelector('.menu-toggle');
     const primaryNav = document.getElementById('primary-nav');
 
+    function closeMenu() {
+      primaryNav.classList.remove('is-open');
+      menuToggle.setAttribute('aria-expanded', 'false');
+      menuToggle.setAttribute('aria-label', 'メニューを開く');
+    }
+
     menuToggle.addEventListener('click', function() {
       const isExpanded = menuToggle.getAttribute('aria-expanded') === 'true';
+      primaryNav.classList.toggle('is-open', !isExpanded);
       menuToggle.setAttribute('aria-expanded', String(!isExpanded));
       menuToggle.setAttribute('aria-label', isExpanded ? 'メニューを開く' : 'メニューを閉じる');
-      primaryNav.hidden = isExpanded;
+      if (!isExpanded) primaryNav.querySelector('a')?.focus();
+    });
+    document.addEventListener('keydown', function(event) {
+      if (event.key === 'Escape' && menuToggle.getAttribute('aria-expanded') === 'true') {
+        closeMenu();
+        menuToggle.focus();
+      }
+    });
+    primaryNav.addEventListener('click', function(event) {
+      if (event.target instanceof HTMLAnchorElement && window.matchMedia('(max-width: 760px)').matches) {
+        closeMenu();
+      }
     });
   </script>
 </body>

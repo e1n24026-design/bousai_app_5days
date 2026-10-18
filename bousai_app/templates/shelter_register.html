@@ -2,7 +2,7 @@
 
 {% block content %}
 <h2>避難所登録</h2>
-<p>新しい避難所情報を登録します。</p>
+<p>確認できている情報を登録します。不明な項目は空欄のままにしてください。</p>
 
 <!-- 成功・エラーメッセージ表示 -->
 {% if success %}
@@ -14,10 +14,37 @@
 {% endif %}
 
 <form method="POST">
-  <p>
-    <label for="name">避難所名（必須）</label><br>
-    <input type="text" id="name" name="name">
-  </p>
+  <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+  <p><label for="name">避難所名（必須）</label><br>
+    <input type="text" id="name" name="name" maxlength="200" required></p>
+  <p><label for="address">住所</label><br>
+    <input type="text" id="address" name="address"></p>
+  <p><label for="open_status">開設状況</label><br>
+    <select id="open_status" name="open_status">
+      <option value="">情報なし</option>
+      <option value="開設中">開設中</option>
+      <option value="閉鎖中">閉鎖中</option>
+    </select></p>
+  <p><label for="capacity">収容人数</label><br>
+    <input type="number" id="capacity" name="capacity" min="0" step="1"></p>
+  <p><label for="evacuee_count">現在の避難者数</label><br>
+    <input type="number" id="evacuee_count" name="evacuee_count" min="0" step="1"></p>
+  <fieldset>
+    <legend>設備・配慮事項</legend>
+    {% for field, label in [
+      ('pet_friendly', 'ペット同伴可'),
+      ('barrier_free', 'バリアフリー'),
+      ('wheelchair_toilet', '車いす対応トイレ'),
+      ('welfare_space', '福祉スペース')
+    ] %}
+      <p><label for="{{ field }}">{{ label }}</label><br>
+        <select id="{{ field }}" name="{{ field }}">
+          <option value="">情報なし</option>
+          <option value="true">対応あり</option>
+          <option value="false">対応なし</option>
+        </select></p>
+    {% endfor %}
+  </fieldset>
   <p><button type="submit">登録</button></p>
 </form>
 {% endblock %}

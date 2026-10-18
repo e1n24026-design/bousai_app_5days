@@ -3,23 +3,135 @@
 {% block title %}指示・発信ボード - 防災アプリ{% endblock %}
 
 {% block content %}
-<h2>発信ボード</h2>
-<p>住民向けの発信を登録・確認できます。</p>
+<section class="home-section" aria-labelledby="board-heading">
+  <h2 class="section-heading" id="board-heading">指示・発信ボード</h2>
+  <p>職員向け指示を登録し、対応状況を管理します。住民向けに登録した内容はホーム画面にも表示されます。</p>
 
-<!-- 発信一覧 -->
-<h3>発信一覧</h3>
-{% if instructions %}
-<table border="1" cellpadding="5">
-  <tr>
-    <th>内容</th>
-  </tr>
-  {% for inst in instructions %}
-  <tr>
-    <td>{{ inst.content }}{% if inst.shelter %}（避難先: {{ inst.shelter }}）{% endif %}</td>
-  </tr>
+  {% if error %}<p class="form-message error" role="alert">{{ error }}</p>{% endif %}
+  {% for category, message in get_flashed_messages(with_categories=true) %}
+    <p class="form-message {{ category }}" role="status">{{ message }}</p>
   {% endfor %}
-</table>
-{% else %}
-<p>登録されている指示はありません。</p>
-{% endif %}
+
+  <form class="instruction-form" action="{{ url_for('create_instruction') }}" method="post">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+    <div class="form-field">
+      <label for="content">指示内容（必須・500文字以内）</label>
+      <textarea id="content" name="content" maxlength="500" required rows="4">{{ form_data.get('content', '') }}</textarea>
+    </div>
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="target">宛先</label>
+        <select id="target" name="target" required>
+          {% for target in targets %}
+            <option value="{{ target }}" {% if form_data.get('target', '住民') == target %}selected{% endif %}>{{ target }}向け</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="district">対象地区</label>
+        <select id="district" name="district" required>
+          {% for district in districts %}
+            <option value="{{ district }}" {% if form_data.get('district', '市内全域') == district %}selected{% endif %}>{{ district }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="shelter-id">避難先（任意）</label>
+        <select id="shelter-id" name="shelter_id">
+          <option value="">指定しない</option>
+          {% for shelter in available_shelters %}
+            <option value="{{ shelter.id }}" {% if form_data.get('shelter_id', '')|string == shelter.id|string %}selected{% endif %}>{{ shelter.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="urgency">緊急度</label>
+        <select id="urgency" name="urgency" required>
+          {% for urgency in urgencies %}
+            <option value="{{ urgency }}" {% if form_data.get('urgency', '中') == urgency %}selected{% endif %}>{{ urgency }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <button class="primary-button" type="submit">指示を登録</button>
+  </form>
+</section>
+
+<section class="home-section" aria-labelledby="instruction-list-heading">
+  <h2 class="section-heading" id="instruction-list-heading">登録済み指示</h2>
+  {% if instructions %}
+    <ul class="instruction-list">
+      {% for inst in instructions %}
+        <li class="instruction-card">
+          <div class="instruction-card-heading">
+            <h3>{{ inst.content }}</h3>
+            <span class="urgency urgency-{{ inst.urgency }}">{{ inst.urgency }}緊急度</span>
+          </div>
+          <dl class="instruction-details">
+            <div><dt>宛先</dt><dd>{{ inst.target }}向け</dd></div>
+            <div><dt>対象地区</dt><dd>{{ inst.district or '市内全域' }}</dd></div>
+            <div><dt>避難先</dt><dd>{{ inst.shelter_name or '指定なし' }}</dd></div>
+            <div><dt>登録日時</dt><dd>{{ inst.created_at_display }}</dd></div>
+            <div><dt>対応状況</dt><dd>{{ inst.status_label }}</dd></div>
+            <div><dt>最終更新</dt><dd>{{ inst.updated_at_display }}</dd></div>
+          </dl>
+          <form class="status-form" action="{{ url_for('update_instruction_status', instruction_id=inst.id) }}" method="post">
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+            <label for="status-{{ inst.id }}">対応状況を更新</label>
+            <select id="status-{{ inst.id }}" name="status" required>
+              {% if inst.status_label not in statuses %}
+                <option value="" selected disabled>{{ inst.status_label }}（以前の状態）</option>
+              {% endif %}
+              {% for status in statuses %}
+                <option value="{{ status }}" {% if inst.status_label == status %}selected{% endif %}>{{ status }}</option>
+              {% endfor %}
+            </select>
+            <button type="submit">更新</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>登録されている指示はありません。</p>
+  {% endif %}
+</section>
+
+<style>
+  .instruction-form, .form-field { display: grid; gap: 8px; }
+  .instruction-form { gap: 18px; }
+  .form-field label, .status-form label { font-weight: 700; }
+  .form-field textarea, .form-field select, .status-form select {
+    width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid #9aaabd;
+    border-radius: 5px; background: #fff; color: var(--ink); font: inherit;
+  }
+  .form-field textarea { resize: vertical; }
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .primary-button, .status-form button {
+    min-height: 44px; padding: 9px 16px; border: 0; border-radius: 5px;
+    background: var(--blue); color: #fff; font: inherit; font-weight: 700; cursor: pointer;
+  }
+  .primary-button { justify-self: start; }
+  .form-message { padding: 12px 14px; border-radius: 5px; }
+  .form-message.error { background: #fff0ed; color: #942c1c; }
+  .form-message.success { background: #eaf6ee; color: #1e6b3a; }
+  .instruction-list { display: grid; gap: 16px; margin: 0; padding: 0; list-style: none; }
+  .instruction-card { padding: 18px; border: 1px solid var(--line); border-radius: 6px; }
+  .instruction-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+  .instruction-card h3 { margin: 0 0 14px; color: var(--blue); overflow-wrap: anywhere; }
+  .urgency { flex: none; padding: 4px 9px; border-radius: 999px; background: #edf1f5; font-size: .88rem; font-weight: 700; }
+  .urgency-高 { background: #fde5e1; color: #942c1c; }
+  .urgency-中 { background: #fff2d6; color: #744900; }
+  .urgency-低 { background: #eaf6ee; color: #1e6b3a; }
+  .instruction-details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0 0 16px; }
+  .instruction-details dt { color: var(--muted); font-size: .88rem; }
+  .instruction-details dd { margin: 2px 0 0; overflow-wrap: anywhere; }
+  .status-form { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .status-form select { width: auto; min-width: 130px; }
+  @media (max-width: 640px) {
+    .form-grid, .instruction-details { grid-template-columns: 1fr; }
+    .instruction-card-heading { flex-direction: column; gap: 0; }
+    .status-form label { flex-basis: 100%; }
+    .status-form select { flex: 1; }
+  }
+</style>
 {% endblock %}

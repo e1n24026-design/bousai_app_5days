@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% block title %}避難所一覧 - 防災アプリ{% endblock %}
+
 {% block content %}
 <section class="home-section results-section" aria-labelledby="results-heading">
   <h2 class="section-heading" id="results-heading">
@@ -8,83 +10,74 @@
 
   {% if search_performed %}
     <div class="condition-summary" aria-label="検索条件">
-      <strong>検索条件</strong>
+      <strong>選択した条件</strong>
       <ul>
-        {% if disaster_type %}<li>災害: {{ disaster_type }}</li>{% endif %}
         {% if pet_friendly %}<li>ペット同伴可</li>{% endif %}
         {% if barrier_free %}<li>バリアフリー</li>{% endif %}
-        {% if district %}<li>地区: {{ district }}</li>{% endif %}
-        {% if keyword %}<li>キーワード: {{ keyword }}</li>{% endif %}
       </ul>
     </div>
   {% else %}
     <p>登録されている避難所を一覧表示しています。</p>
   {% endif %}
 
-  <p class="result-count">{{ results|length }}件の避難所</p>
+  <p class="result-count" aria-live="polite">{{ results|length }}件の避難所</p>
 
   {% if results %}
     <ul class="shelter-list">
       {% for shelter in results %}
         <li class="shelter-card">
-          <h3>{{ shelter.name }}</h3>
-          <dl>
-            <div>
-              <dt>地区</dt>
-              <dd>{{ shelter.district if shelter.district is defined and shelter.district else '未登録' }}</dd>
-            </div>
-            <div>
-              <dt>対応する災害</dt>
+          <h3>{{ shelter.name if shelter.name is defined and shelter.name else '名称未登録' }}</h3>
+          <dl class="shelter-details">
+            <div><dt>住所</dt><dd>{{ shelter.address_display }}</dd></div>
+            <div><dt>開設状況</dt><dd>{{ shelter.open_status_display }}</dd></div>
+            <div><dt>収容人数</dt><dd>{% if shelter.occupancy.capacity is not none %}{{ shelter.occupancy.capacity }}人{% else %}情報なし{% endif %}</dd></div>
+            <div><dt>現在の避難者数</dt><dd>{% if shelter.occupancy.evacuee_count is not none %}{{ shelter.occupancy.evacuee_count }}人{% else %}情報なし{% endif %}</dd></div>
+            <div class="vacancy">
+              <dt>空き状況</dt>
               <dd>
-                {% if shelter.disaster_types is defined and shelter.disaster_types %}
-                  {{ shelter.disaster_types|join('、') }}
+                <span class="occupancy-status {{ shelter.occupancy.status_class }}">
+                  {% if shelter.occupancy.status == '情報なし' %}
+                    ? 情報なし
+                  {% elif shelter.occupancy.status == '満員' %}
+                    ! 満員
+                  {% elif shelter.occupancy.status == 'ほぼ満員' %}
+                    △ ほぼ満員
+                  {% else %}
+                    ✓ 空きあり
+                  {% endif %}
+                </span>
+                {% if shelter.occupancy.remaining is not none %}
+                  <span class="remaining-count">残り {{ shelter.occupancy.remaining }}人</span>
                 {% else %}
-                  未登録
-                {% endif %}
-              </dd>
-            </div>
-            <div>
-              <dt>ペット同伴</dt>
-              <dd>
-                {% if shelter.pet_friendly is defined and shelter.pet_friendly is sameas true %}
-                  可
-                {% elif shelter.pet_friendly is defined and shelter.pet_friendly is sameas false %}
-                  不可
-                {% else %}
-                  未登録
-                {% endif %}
-              </dd>
-            </div>
-            <div>
-              <dt>バリアフリー</dt>
-              <dd>
-                {% if shelter.barrier_free is defined and shelter.barrier_free is sameas true %}
-                  対応
-                {% elif shelter.barrier_free is defined and shelter.barrier_free is sameas false %}
-                  未対応
-                {% else %}
-                  未登録
+                  <span class="remaining-count">残り人数: 情報なし</span>
                 {% endif %}
               </dd>
             </div>
           </dl>
+          <h4 class="equipment-heading">設備・配慮事項</h4>
+          <ul class="equipment-list">
+            {% for item in shelter.equipment %}
+              <li class="equipment-item {{ item.status_class }}">
+                <span class="equipment-icon" aria-hidden="true">{{ item.icon }}</span>
+                <span>{{ item.label }}</span>
+                <strong>{{ item.status }}</strong>
+              </li>
+            {% endfor %}
+          </ul>
         </li>
       {% endfor %}
     </ul>
   {% else %}
-    <p class="empty-results">条件に合う避難所が見つかりませんでした。条件を変更して再検索してください。</p>
+    <div class="empty-results" role="status">
+      <h3>条件に合う避難所がありません</h3>
+      <p>選択した条件を見直して、もう一度検索してください。</p>
+    </div>
   {% endif %}
 
   <p class="data-note">
-    絞り込みと設備情報は登録内容に基づいています。未登録の条件は、条件を指定した検索では一致扱いになりません。
+    設備・避難状況は登録データに基づいて表示しています。情報が登録されていない項目は「情報なし」と表示されます。
   </p>
 </section>
-
-<nav class="results-navigation" aria-label="検索結果の操作">
-  <a class="results-button primary" href="{{ url_for('shelter_search') }}">条件を変更して検索</a>
-  <a class="results-button" href="{{ url_for('all_shelters') }}">全施設一覧</a>
-  <a class="results-button" href="{{ url_for('index') }}">ホームに戻る</a>
-</nav>
 
 <style>
   .condition-summary { padding: 14px 18px; border-radius: 6px; background: #f3f6fa; }
@@ -92,20 +85,33 @@
   .result-count { margin: 22px 0 12px; font-weight: 700; }
   .shelter-list { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
   .shelter-card { padding: 18px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
-  .shelter-card h3 { margin: 0 0 12px; color: var(--blue); font-size: 1.15rem; }
-  .shelter-card dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin: 0; }
-  .shelter-card dl div { min-width: 0; }
-  .shelter-card dt { color: var(--muted); font-size: .9rem; }
-  .shelter-card dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
-  .empty-results { padding: 18px; border-left: 4px solid #d48b24; background: #fff8e8; }
+  .shelter-card h3 { margin: 0 0 14px; color: var(--blue); font-size: 1.15rem; }
+  .shelter-details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 20px; margin: 0; }
+  .shelter-details > div { min-width: 0; }
+  .shelter-details dt { color: var(--muted); font-size: .9rem; }
+  .shelter-details dd { margin: 2px 0 0; font-weight: 600; overflow-wrap: anywhere; }
+  .vacancy dd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .occupancy-status { display: inline-block; padding: 5px 10px; border: 1px solid currentColor; border-radius: 5px; font-weight: 700; }
+  .occupancy-status.available { color: #176b35; background: #e8f5eb; }
+  .occupancy-status.nearly-full { color: #704c00; background: #fff3cd; }
+  .occupancy-status.full { color: #8f241a; background: #fde8e5; }
+  .occupancy-status.unknown { color: #465466; background: #eef1f4; }
+  .remaining-count { font-weight: 500; }
+  .equipment-heading { margin: 18px 0 9px; font-size: 1rem; }
+  .equipment-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; padding: 0; list-style: none; }
+  .equipment-item { display: flex; align-items: center; gap: 7px; min-height: 42px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 5px; }
+  .equipment-icon { width: 1.25em; text-align: center; font-weight: 800; }
+  .equipment-item strong { margin-left: auto; white-space: nowrap; font-size: .9rem; }
+  .equipment-item.available strong { color: #176b35; }
+  .equipment-item.unavailable strong { color: #465466; }
+  .equipment-item.unknown strong { color: #465466; }
+  .empty-results { margin: 8px 0; padding: 18px; border-left: 4px solid #d48b24; background: #fff8e8; }
+  .empty-results h3 { margin: 0 0 7px; font-size: 1.1rem; }
+  .empty-results p { margin: 0; }
   .data-note { margin: 22px 0 0; color: var(--muted); font-size: .9rem; line-height: 1.6; }
-  .results-navigation { display: flex; flex-wrap: wrap; gap: 12px; }
-  .results-button { display: inline-flex; min-height: 50px; align-items: center; justify-content: center; padding: 10px 16px; border: 1px solid #aab8c8; border-radius: 6px; background: #fff; color: var(--ink); font-weight: 700; text-align: center; text-decoration: none; }
-  .results-button.primary { border-color: var(--blue); background: var(--blue); color: #fff; }
-  .results-button:hover { filter: brightness(.96); }
   @media (max-width: 600px) {
-    .shelter-card dl { grid-template-columns: 1fr; }
-    .results-navigation > * { flex: 1 1 100%; }
+    .shelter-details, .equipment-list { grid-template-columns: 1fr; }
+    .shelter-card { padding: 16px; }
   }
 </style>
 {% endblock %}
